@@ -10,7 +10,7 @@ class Language:
     def __init__(self):
         self.word_to_index = {}
         self.word_to_count = {}
-        self.index_to_word = {0: "BOW", 1: "EOW"}
+        self.index_to_word = {BOW_token: "BOW", EOW_token: "EOW"}
         self.n_words = 2
 
     def add_sentence(self, sentence):
