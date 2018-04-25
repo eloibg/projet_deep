@@ -36,10 +36,7 @@ class CharacterLevelEncoder(Language):
     def __init__(self):
         super(CharacterLevelEncoder, self).__init__()
         for c in ascii_lowercase:
-            self.word_to_index[c] = self.n_words
-            self.word_to_count[c] = 1
-            self.index_to_word[self.n_words] = c
-            self.n_words += 1
+            self.add_word(c)
 
     def add_sentence(self, sentence):
         for word in list(sentence):
@@ -47,6 +44,7 @@ class CharacterLevelEncoder(Language):
 
     def make_one_hot(self, word):
         if word in self.word_to_index:
+            word = word.lower()
             one_hot = [0] * self.n_words
             one_hot[self.word_to_index[word]] = 1
             return one_hot
