@@ -1,5 +1,10 @@
 from string import ascii_lowercase
+
 import torch.nn as nn
+import torch
+from torch.autograd import Variable
+
+import numpy as np
 
 
 BOW_token = 0
@@ -47,22 +52,22 @@ class CharacterLevelEncoder(Language):
             word = word.lower()
             one_hot = [0] * self.n_words
             one_hot[self.word_to_index[word]] = 1
-            return one_hot
+            return np.asarray(one_hot)
 
 
 class CNN(nn.Module):
-    def __init__(self, n_layers=50):
+    def __init__(self, n_layers=50, vocabulary_size=29):
         super(CNN, self).__init__()
 
         self.layers = []
         for i in range(n_layers):
-            layer = nn.Sequential(nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            layer = nn.Sequential(nn.Conv1d(1, vocabulary_size, kernel_size=3, padding=1),
                                   nn.ReLU(),
-                                  nn.AdaptiveAvgPooling1D(1))
+                                  nn.AdaptiveAvgPool1d(1))
             self.layers.append(layer)
 
     def forward(self, x):
-        out = x
+        out = Variable(torch.FloatTensor(x))
         for layer in self.layers:
             out = layer.forward(out)
         return out
@@ -75,6 +80,7 @@ if __name__ == '__main__':
     lang = CharacterLevelEncoder()
     lang.add_sentence(premiere_phrase)
     lang.add_sentence(deuxieme_phrase)
-    print(lang.n_words)
-    print(lang.index_to_word)
     print(lang.make_one_hot("p"))
+
+    cnn = CNN(n_layers=50, vocabulary_size=lang.n_words)
+    cnn.forward(lang.make_one_hot("p"))
