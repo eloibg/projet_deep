@@ -1,89 +1,100 @@
 import pandas as pd
-import ast
-import json
 import csv
+import nltk
+from Utils import assignSWNTags, check_for_idioms, adjust_idioms_tags, convert_pos_to_float
 import numpy as np
-from random import uniform
+from LexiconClassify import LexiconClassify
+from Characters import Characters
+import time
 
-embed_size = 100
-UNK = []
-for j in range(0, embed_size):
-    UNK.append(uniform(-1.0, 1.0))
-
-glove_data_file = "C:\\Users\\eloib\\Downloads\\glove.twitter.27B\\glove.twitter.27B.100d.txt"
-#glove_data_file = "C:\\Users\\eloib\\Downloads\\glove.840B.300d\\glove.840B.300d.txt"
-words = pd.read_table(glove_data_file, sep=" ", index_col=0, header=None, quoting=csv.QUOTE_NONE)
-
-embed_size = 100
-UNK = []
-for j in range(0, embed_size):
-    UNK.append(uniform(-1.0, 1.0))
+UNKNOWN_TOKEN = '<UNK>'
+EMBEDDING_SIZE = 300
+GLOVE_PATH = "C:\\Users\\eloib\\Downloads\\glove.twitter.27B\\glove.twitter.27B.100d.txt"
+FASTTEXT_PATH = "C:\\Users\\eloib\\Downloads\\crawl-300d-2M.vec\\crawl-300d-2M.vec"
+TRAIN_PATH = "C:\\Users\\eloib\\Downloads\\train\\train.csv"
+CHAR_LIST = 'abcdefghijklmnopqrstuvwxyz1234567890.,\';:^()<>[]{}!"/$%?&*'
 
 
-path_dataset = "C:\\Users\\eloib\\Documents\\Maitrise\\NegDetector\\preprocessedPerspective.csv"
-path_sentiment = "C:\\Users\\eloib\\Documents\\Maitrise\\NegDetector\\FinalTests\\perspectiveAllWords"
+class Preprocess:
 
-finn = json.load(open(path_sentiment + "finn.json"))
-inquirer = json.load(open(path_sentiment + "inquirer.json"))
-liu = json.load(open(path_sentiment + "liu.json"))
-nrc = json.load(open(path_sentiment + "nrc.json"))
-subj = json.load(open(path_sentiment + "subj.json"))
-swn = json.load(open(path_sentiment + "SWN.json"))
+    def __init__(self):
+        t = time.time()
+        print('Loading data...')
+        self.train = pd.read_csv(TRAIN_PATH)
+        self.x_train = self.train["comment_text"].values
+        self.y_train = self.train["toxic"].values
+        ### Temporary to work faster
+        self.x_train = self.x_train[0:20]
+        self.y_train = self.y_train[0:20]
 
-data = pd.read_csv(path_dataset, sep='\t', encoding='utf-8', header=None)
-sentences = data[1]
-scores = data[3]
+        self.fasttext_embeds = pd.read_table(FASTTEXT_PATH, sep=" ", index_col=0, header=None, usecols=range(0, 301),
+                                             skiprows=1, quoting=csv.QUOTE_NONE)
+        self.dictionary = {}
+        self.embedding_matrix = None
+        self.processed_text = []
+        self.lex = None
+        self.char_model = Characters()
+        print('Done in '+str(time.time()-t) + 's')
 
-formatted_sentences = []
-augmented_embedding = []
+    def raw_text_processing(self):
+        for i in range(0, len(self.x_train)):
+            sentence = self.x_train[i]
+            sentence = check_for_idioms(sentence)
+            tokens = nltk.wordpunct_tokenize(sentence)
+            if '#' in tokens:
+                tokens.remove('#')
+            tokens = nltk.pos_tag(tokens)
+            tokens = assignSWNTags(tokens)
+            tokens = adjust_idioms_tags(tokens)
+            self.processed_text.append(tokens)
 
-for i in range(0, 1000):
-    sentence = ast.literal_eval(sentences[i])
-    formatted_sentence = []
-    sentence_augmented_embedding = []
-    sentence_pos = []
-    for word in sentence:
-        word_pos = word.split('#')
-        formatted_sentence.append(word_pos[0])
-        if word_pos[1] == 'n':
-            sentence_pos.append(-1)
-        elif word_pos[1] == 'v':
-            sentence_pos.append(-0.5)
-        elif word_pos[1] == 'r':
-            sentence_pos.append(0.5)
-        elif word_pos[1] == 'a':
-            sentence_pos.append(1)
-        else:
-            sentence_pos.append(0.0)
-    for k in range(0, len(formatted_sentence)):
-        word = formatted_sentence[k]
-        try:
-            embed = words.loc[word].as_matrix()
-        except:
-            embed = UNK
-        word_augmented_embedding = embed
-        word_augmented_embedding = np.append(word_augmented_embedding, [finn[str(i)][0][k], inquirer[str(i)][0][k], liu[str(i)][0][k],
-                                             nrc[str(i)][0][k], subj[str(i)][0][k], swn[str(i)][0][k],
-                                             finn[str(i)][1][k], inquirer[str(i)][1][k], liu[str(i)][1][k],
-                                             nrc[str(i)][1][k], subj[str(i)][1][k], swn[str(i)][1][k], sentence_pos[k]])
-        sentence_augmented_embedding.append(word_augmented_embedding)
-    formatted_sentences.append(formatted_sentence)
-    augmented_embedding.append(sentence_augmented_embedding)
-    print(i)
+    def build_embeddings(self):
+        word_list = nltk.Text([item.split('#')[0] for sublist in self.processed_text for item in sublist]).vocab()
+        self.embedding_matrix = np.zeros((len(word_list), EMBEDDING_SIZE))
+        i = 0
+        for word in word_list.keys():
+            try:
+                self.embedding_matrix[i] = self.fasttext_embeds.loc[word]
+                self.dictionary[word.split('#')[0]] = i
+                i += 1
+            except KeyError:
+                continue
+        self.embedding_matrix[i] = np.zeros(EMBEDDING_SIZE)
+        self.dictionary[UNKNOWN_TOKEN] = i
+        self.embedding_matrix = self.embedding_matrix[0:i + 1]
 
-    if i % 1000 == 0:
-        pd.DataFrame(augmented_embedding).to_csv('essai' + str(i) + '.csv', sep='\t', encoding='utf-8', header=None)
+    def lexicon_classify(self):
+        lex = LexiconClassify(self.processed_text)
+        lex.classify()
+        self.lex = lex
 
-pd.DataFrame(augmented_embedding).to_csv('essai' + str(i) + '.csv', sep='\t', encoding='utf-8', header=None)
-
-with open('sentences.txt', 'w+', encoding='utf-8') as f:
-    for sentence in formatted_sentences:
-        f.write(' '.join(sentence))
-        f.write('\n')
-
-with open('scores.txt', 'w+') as f:
-    for score in scores:
-        f.write(str(score))
-        f.write('\n')
-
-
+    def build_vectors(self):
+        t = time.time()
+        print("Processing raw text...")
+        self.raw_text_processing()
+        print('Done in ' + str(time.time() - t) + 's')
+        t = time.time()
+        print("Building embeddings...")
+        self.build_embeddings()
+        print('Done in ' + str(time.time() - t) + 's')
+        t = time.time()
+        print("Looking for sentiment information...")
+        self.lexicon_classify()
+        print('Done in ' + str(time.time() - t) + 's')
+        # Each word has 300 (emb) + 59 (char) + 12 (sentiment) + 1 (pos) = 372 dimensions par mot
+        self.vectors = []
+        self.char_model.add_char(CHAR_LIST)
+        for i, sentence in enumerate(self.processed_text):
+            sentence_vector = np.zeros((len(sentence), 372))
+            for j, word in enumerate(sentence):
+                word, pos = word.split('#')
+                try:
+                    embedding = self.embedding_matrix[self.dictionary[word]]
+                except KeyError:
+                    embedding = self.embedding_matrix[self.dictionary[UNKNOWN_TOKEN]]
+                char_val = self.char_model.make_one_hot(word)
+                sentiment = np.array(self.lex.sentiment_scores[i][j])
+                word_vector = np.concatenate((embedding, char_val, sentiment, np.array([convert_pos_to_float(pos)])))
+                sentence_vector[j] = word_vector
+            self.vectors.append(sentence_vector)
+        print('Vectors built!')

@@ -1,86 +1,49 @@
-from string import ascii_lowercase
-
 import torch.nn as nn
-import torch
 from torch.autograd import Variable
-
-import numpy as np
-
-
-BOW_token = 0
-EOW_token = 1
+import torch.optim as optim
+from deeplib import training
+from torch.utils.data import Dataset, DataLoader
+from preprocessing import Preprocess
 
 
-class Language:
-    def __init__(self):
-        self.word_to_index = {}
-        self.word_to_count = {}
-        self.index_to_word = {BOW_token: "BOW", EOW_token: "EOW"}
-        self.n_words = 2
+class ToxicityDataset(Dataset):
+    def __init__(self, input, target):
+        super(ToxicityDataset, self).__init__()
 
-    def add_word(self, word):
-        if word not in self.word_to_index:
-            self.word_to_index[word] = self.n_words
-            self.word_to_count[word] = 1
-            self.index_to_word[self.n_words] = word
-            self.n_words += 1
-        else:
-            self.word_to_count[word] += 1
+        self.input = input
+        self.target = target
+        if len(input) != len(target):
+            raise Exception('Input and target are not the same length!')
 
+    def __len__(self):
+        return len(self.input)
 
-class WordLevelEncoder(Language):
-    def __init__(self):
-        super(WordLevelEncoder, self).__init__()
+    def __getitem__(self, item):
+        return (self.input[item], self.target[item])
 
-    def add_sentence(self, sentence):
-        for word in sentence.split(' '):
-            self.add_word(word)
+class GRU(nn.Module):
+    def __init__(self, vocabulary_size):
+        super(GRU, self).__init__()
 
+        self.gru = nn.GRU(vocabulary_size, 20, bidirectional=True, batch_first=True)
+        self.dropout = nn.Dropout(p=0.5)
+        self.lc = nn.Linear(40, 2)
 
-class CharacterLevelEncoder(Language):
-    def __init__(self):
-        super(CharacterLevelEncoder, self).__init__()
-        for c in ascii_lowercase:
-            self.add_word(c)
-
-    def add_sentence(self, sentence):
-        for word in list(sentence):
-            self.add_word(word)
-
-    def make_one_hot(self, word):
-        if word in self.word_to_index:
-            word = word.lower()
-            one_hot = [0] * self.n_words
-            one_hot[self.word_to_index[word]] = 1
-            return np.asarray(one_hot)
-
-
-class CNN(nn.Module):
-    def __init__(self, n_layers=50, vocabulary_size=29):
-        super(CNN, self).__init__()
-
-        self.layers = []
-        for i in range(n_layers):
-            layer = nn.Sequential(nn.Conv1d(1, vocabulary_size, kernel_size=3, padding=1),
-                                  nn.ReLU(),
-                                  nn.AdaptiveAvgPool1d(1))
-            self.layers.append(layer)
-
-    def forward(self, x):
-        out = Variable(torch.FloatTensor(x))
-        for layer in self.layers:
-            out = layer.forward(out)
-        return out
+    def forward(self, x, hidden):
+        input = x
+        output1, h_n = self.gru(input, hidden)
+        x = self.dropout(output1[:, -1, :].squeeze(1))
+        output2 = self.lc(x)
+        return output2, h_n
 
 
 if __name__ == '__main__':
-    premiere_phrase = "une phrase quelconque"
-    deuxieme_phrase = "une autre phrase pas rapport"
+    pre = Preprocess()
+    pre.build_vectors()
+    dataset = ToxicityDataset(pre.vectors, pre.y_train)
 
-    lang = CharacterLevelEncoder()
-    lang.add_sentence(premiere_phrase)
-    lang.add_sentence(deuxieme_phrase)
-    print(lang.make_one_hot("p"))
+    train_loader = DataLoader(dataset, batch_size=1)
+    gru = GRU(372).double()
 
-    cnn = CNN(n_layers=50, vocabulary_size=lang.n_words)
-    cnn.forward(lang.make_one_hot("p"))
+    training.train(gru, dataset, 10, 1, 0.1)
+

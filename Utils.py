@@ -65,7 +65,7 @@ def negationCheck(word, tagged_words):
     for tagged_word in tagged_words:
         sentence = sentence + tagged_word.split('#')[0] + " "
     if word.split('#')[0] in rules:
-        return False   ### You can negate a negation
+        return False   ### You can't negate a negation
     else:
         return any([negation in sentence.split(' ') for negation in rules])
 
@@ -82,3 +82,15 @@ def adjust_idioms_tags(words):
         if 'shut_up' in words[i]:
             words[i] = 'shut_up#v'
     return words
+
+def convert_pos_to_float(pos):
+    if pos == 'n':
+        return 1
+    elif pos == 'v':
+        return 0.5
+    elif pos == 'a':
+        return -0.5
+    elif pos == 'r':
+        return -1
+    else:
+        return 0
