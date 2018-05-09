@@ -12,7 +12,7 @@ EMBEDDING_SIZE = 300
 GLOVE_PATH = "C:\\Users\\eloib\\Downloads\\glove.twitter.27B\\glove.twitter.27B.100d.txt"
 FASTTEXT_PATH = "C:\\Users\\eloib\\Downloads\\crawl-300d-2M.vec\\crawl-300d-2M.vec"
 TRAIN_PATH = "C:\\Users\\eloib\\Downloads\\train\\train.csv"
-CHAR_LIST = 'abcdefghijklmnopqrstuvwxyz1234567890.,\';:^()<>[]{}!"/$%?&*'
+CHAR_LIST = 'abcdefghijklmnopqrstuvwxyz1234567890.,\';:^()#<>[]{}!"/$%?&*'
 
 
 class Preprocess:
@@ -23,7 +23,7 @@ class Preprocess:
         self.train = pd.read_csv(TRAIN_PATH)
         self.x_train = self.train["comment_text"].values
         self.y_train = self.train["toxic"].values
-        ### Temporary to work faster
+        ### Temporary to test faster
         self.x_train = self.x_train[0:20]
         self.y_train = self.y_train[0:20]
 
@@ -34,6 +34,7 @@ class Preprocess:
         self.processed_text = []
         self.lex = None
         self.char_model = Characters()
+        self.vectors = []
         print('Done in '+str(time.time()-t) + 's')
 
     def raw_text_processing(self):
@@ -41,8 +42,6 @@ class Preprocess:
             sentence = self.x_train[i]
             sentence = check_for_idioms(sentence)
             tokens = nltk.wordpunct_tokenize(sentence)
-            if '#' in tokens:
-                tokens.remove('#')
             tokens = nltk.pos_tag(tokens)
             tokens = assignSWNTags(tokens)
             tokens = adjust_idioms_tags(tokens)
@@ -81,13 +80,15 @@ class Preprocess:
         print("Looking for sentiment information...")
         self.lexicon_classify()
         print('Done in ' + str(time.time() - t) + 's')
-        # Each word has 300 (emb) + 59 (char) + 12 (sentiment) + 1 (pos) = 372 dimensions par mot
-        self.vectors = []
+        t = time.time()
+        print("Building vectors...")
+        # Each word has 300 (emb) + 60 (char) + 12 (sentiment) + 1 (pos) = 372 dimensions par mot
         self.char_model.add_char(CHAR_LIST)
         for i, sentence in enumerate(self.processed_text):
-            sentence_vector = np.zeros((len(sentence), 372))
+            sentence_vector = np.zeros((len(sentence), 373))
             for j, word in enumerate(sentence):
-                word, pos = word.split('#')
+                pos = word[-1:]
+                word = word[:-2]
                 try:
                     embedding = self.embedding_matrix[self.dictionary[word]]
                 except KeyError:
@@ -97,4 +98,5 @@ class Preprocess:
                 word_vector = np.concatenate((embedding, char_val, sentiment, np.array([convert_pos_to_float(pos)])))
                 sentence_vector[j] = word_vector
             self.vectors.append(sentence_vector)
-        print('Vectors built!')
+        print('Done in ' + str(time.time() - t) + 's')
+
