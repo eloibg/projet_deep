@@ -24,24 +24,41 @@ class Preprocess:
         self.x_train = self.train["comment_text"].values
         self.y_train = self.train["toxic"].values
         ### Temporary to test faster
-        self.x_train = self.x_train[0:20]
-        self.y_train = self.y_train[0:20]
+        #self.x_train = self.x_train[0:300]
+        #self.y_train = self.y_train[0:300]
 
         self.fasttext_embeds = pd.read_table(FASTTEXT_PATH, sep=" ", index_col=0, header=None, usecols=range(0, 301),
                                              skiprows=1, quoting=csv.QUOTE_NONE)
         self.dictionary = {}
         self.embedding_matrix = None
         self.processed_text = []
+        self.targets = []
         self.lex = None
         self.char_model = Characters()
         self.vectors = []
         print('Done in '+str(time.time()-t) + 's')
 
     def raw_text_processing(self):
+        ## take as many samples (undersampling) from each classes
+        index = []
         for i in range(0, len(self.x_train)):
-            sentence = self.x_train[i]
+            if self.y_train[i] == 1:
+                index.append(i)
+        number_of_toxic_comments = len(index)
+        i = 0
+        while i < number_of_toxic_comments:
+            if self.y_train[i] == 0:
+                index.append(i)
+            else:
+                number_of_toxic_comments += 1
+            i += 1
+
+        for i in range(0, len(index)):
+            sentence = self.x_train[index[i]]
+            self.targets.append(self.y_train[index[i]])
             sentence = check_for_idioms(sentence)
             tokens = nltk.wordpunct_tokenize(sentence)
+            tokens = [x.lower() for x in tokens]
             tokens = nltk.pos_tag(tokens)
             tokens = assignSWNTags(tokens)
             tokens = adjust_idioms_tags(tokens)
@@ -82,9 +99,12 @@ class Preprocess:
         print('Done in ' + str(time.time() - t) + 's')
         t = time.time()
         print("Building vectors...")
-        # Each word has 300 (emb) + 60 (char) + 12 (sentiment) + 1 (pos) = 372 dimensions par mot
+        # Each word has 300 (emb) + 60 (char) + 12 (sentiment) + 1 (pos) = 373 dimensions par mot
         self.char_model.add_char(CHAR_LIST)
         for i, sentence in enumerate(self.processed_text):
+            # Without sentiment
+            #sentence_vector = np.zeros((len(sentence), 360))
+            # With sentiment
             sentence_vector = np.zeros((len(sentence), 373))
             for j, word in enumerate(sentence):
                 pos = word[-1:]
@@ -95,6 +115,9 @@ class Preprocess:
                     embedding = self.embedding_matrix[self.dictionary[UNKNOWN_TOKEN]]
                 char_val = self.char_model.make_one_hot(word)
                 sentiment = np.array(self.lex.sentiment_scores[i][j])
+                # Withouth sentiment
+                #word_vector = np.concatenate((embedding, char_val))
+                # With sentiment
                 word_vector = np.concatenate((embedding, char_val, sentiment, np.array([convert_pos_to_float(pos)])))
                 sentence_vector[j] = word_vector
             self.vectors.append(sentence_vector)
