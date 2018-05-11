@@ -9,9 +9,8 @@ import time
 
 UNKNOWN_TOKEN = '<UNK>'
 EMBEDDING_SIZE = 300
-GLOVE_PATH = "C:\\Users\\eloib\\Downloads\\glove.twitter.27B\\glove.twitter.27B.100d.txt"
-FASTTEXT_PATH = "C:\\Users\\eloib\\Downloads\\crawl-300d-2M.vec\\crawl-300d-2M.vec"
-TRAIN_PATH = "C:\\Users\\eloib\\Downloads\\train\\train.csv"
+FASTTEXT_PATH = "PUT YOUR LOCAL PATH"
+TRAIN_PATH = "PUT YOUR LOCAL PATH"
 CHAR_LIST = 'abcdefghijklmnopqrstuvwxyz1234567890.,\';:^()#<>[]{}!"/$%?&*'
 
 
