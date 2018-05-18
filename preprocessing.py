@@ -9,8 +9,8 @@ import time
 
 UNKNOWN_TOKEN = '<UNK>'
 EMBEDDING_SIZE = 300
-FASTTEXT_PATH = "PUT YOUR LOCAL PATH"
-TRAIN_PATH = "PUT YOUR LOCAL PATH"
+FASTTEXT_PATH = "PATH"
+TRAIN_PATH = "PATH"
 CHAR_LIST = 'abcdefghijklmnopqrstuvwxyz1234567890.,\';:^()#<>[]{}!"/$%?&*'
 
 
@@ -23,8 +23,8 @@ class Preprocess:
         self.x_train = self.train["comment_text"].values
         self.y_train = self.train["toxic"].values
         ### Temporary to test faster
-        #self.x_train = self.x_train[0:300]
-        #self.y_train = self.y_train[0:300]
+        self.x_train = self.x_train[0:300]
+        self.y_train = self.y_train[0:300]
 
         self.fasttext_embeds = pd.read_table(FASTTEXT_PATH, sep=" ", index_col=0, header=None, usecols=range(0, 301),
                                              skiprows=1, quoting=csv.QUOTE_NONE)

@@ -16,13 +16,13 @@ def validate(model, val_loader, use_gpu=False):
     model.eval()
 
     for j, batch in enumerate(val_loader):
-
-        inputs, targets = batch
+        (inputs, targets), inputs_len = batch
         if use_gpu:
             inputs = inputs.cuda()
             targets = targets.cuda()
 
         inputs = Variable(inputs, volatile=True)
+        inputs = nn.utils.rnn.pack_padded_sequence(inputs, inputs_len, batch_first=True)
         targets = Variable(targets, volatile=True)
         output = model(inputs)
 
@@ -47,12 +47,12 @@ def train(model, dataset, n_epoch, batch_size, learning_rate, use_gpu=False):
         t = time.time()
         model.train()
         for j, batch in enumerate(train_loader):
-            inputs, targets = batch
+            (inputs, targets), inputs_len = batch
             if use_gpu:
                 inputs = inputs.cuda()
                 targets = targets.cuda()
-
             inputs = Variable(inputs)
+            inputs = nn.utils.rnn.pack_padded_sequence(inputs, inputs_len, batch_first=True)
             targets = Variable(targets)
             optimizer.zero_grad()
             output = model(inputs)

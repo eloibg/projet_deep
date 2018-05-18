@@ -2,9 +2,10 @@ import torch.nn as nn
 from deeplib import training
 from torch.utils.data import Dataset
 from preprocessing import Preprocess
-from torch.autograd import Variable
 import torch
+from torch.autograd import Variable
 
+use_GPU = False
 
 class ToxicityDataset(Dataset):
     def __init__(self, input, target):
@@ -38,7 +39,11 @@ class GRU(nn.Module):
         #self.gru_hidden = Variable(torch.randn(2, 1, 40)).double()
         #x, self.lstm_hidden = self.lstm(x, None)
         x, self.gru_hidden = self.gru(x, None)
-        x = x[:, -1, :].squeeze(1)
+        x, output_lens = nn.utils.rnn.pad_packed_sequence(x)
+        batch_size = x.shape[1]
+        x = x.view(x.shape[0] * batch_size, x.shape[2])
+        adjusted_lengths = [output_len*batch_size-batch_size for output_len in output_lens]
+        x = x.index_select(0, Variable(torch.LongTensor(adjusted_lengths)))
         x = self.dropout(x)
         output = self.lc(x)
         return output
@@ -47,7 +52,6 @@ class GRU(nn.Module):
 if __name__ == '__main__':
     pre = Preprocess()
     pre.build_vectors()
-    use_GPU = True
     dataset = ToxicityDataset(pre.vectors, pre.targets)
     # Without sentiment
     #gru = GRU(360).double()
@@ -55,5 +59,5 @@ if __name__ == '__main__':
     gru = GRU(373).double()
     if use_GPU:
         gru.cuda()
-    training.train(gru, dataset, 20, 1, 0.1, use_gpu=use_GPU)
+    training.train(gru, dataset, 2, 4, 0.1, use_gpu=use_GPU)
 
