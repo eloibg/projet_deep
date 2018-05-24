@@ -6,17 +6,18 @@ import numpy as np
 from LexiconClassify import LexiconClassify
 from Characters import Characters
 import time
+from AddNoise import add_noise
 
 UNKNOWN_TOKEN = '<UNK>'
 EMBEDDING_SIZE = 300
-FASTTEXT_PATH = "PATH"
-TRAIN_PATH = "PATH"
+#FASTTEXT_PATH = "PATH"
+#TRAIN_PATH = "PATH"
 CHAR_LIST = 'abcdefghijklmnopqrstuvwxyz1234567890.,\';:^()#<>[]{}!"/$%?&*'
 
 
 class Preprocess:
 
-    def __init__(self):
+    def __init__(self, TRAIN_PATH, FASTTEXT_PATH):
         t = time.time()
         print('Loading data...')
         self.train = pd.read_csv(TRAIN_PATH)
@@ -57,6 +58,9 @@ class Preprocess:
             self.targets.append(self.y_train[index[i]])
             sentence = check_for_idioms(sentence)
             tokens = nltk.wordpunct_tokenize(sentence)
+            print(tokens)
+            tokens = add_noise(tokens)
+            print(tokens)
             tokens = [x.lower() for x in tokens]
             tokens = nltk.pos_tag(tokens)
             tokens = assignSWNTags(tokens)

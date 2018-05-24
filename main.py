@@ -49,15 +49,21 @@ class GRU(nn.Module):
         return output
 
 
-if __name__ == '__main__':
-    pre = Preprocess()
+def main(argv):
+    pre = Preprocess(argv[0], argv[1])
     pre.build_vectors()
     dataset = ToxicityDataset(pre.vectors, pre.targets)
     # Without sentiment
-    #gru = GRU(360).double()
+    # gru = GRU(360).double()
     # With sentiment
     gru = GRU(373).double()
     if use_GPU:
         gru.cuda()
     training.train(gru, dataset, 2, 4, 0.1, use_gpu=use_GPU)
+
+if __name__ == '__main__':
+    print("anid")
+    train_path = "C:\\Users\\eloib\\Documents\\Kaggle Toxicity\\train.csv"
+    emb_path = "C:\\Users\\eloib\\Downloads\\crawl-300d-2M.vec\\crawl-300d-2M.vec"
+    main((train_path, emb_path))
 
