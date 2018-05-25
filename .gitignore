@@ -104,3 +104,4 @@ ENV/
 .idea
 *.csv
 *.zip
+resultats.txt
