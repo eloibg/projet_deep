@@ -2,14 +2,22 @@ import random
 
 CHAR_LIST = 'abcdefghijklmnopqrstuvwxyz1234567890.,\';:^()#<>[]{}!"/$%?&*'
 
+def new_char_generator():
+    return CHAR_LIST[random.randint(0, 58)]
+
 def generate_random_subversion(word):
+    rand_ints = []
+    if len(word) > 5:
+        rand_ints.append(random.randint(0, 5))
+        rand_ints.append(random.randint(5, len(word)-1))
+    else:
+        rand_ints.append(random.randint(0, len(word)-1))
     new_word = ""
-    for char in word:
-        random_int = random.randint(1, 100)
-        new_char = char
-        if random_int > 75:
-            random_int = random.randint(0, 58)
-            new_char = CHAR_LIST[random_int]
+    for i, char in enumerate(word):
+        if i in rand_ints:
+            new_char = new_char_generator()
+        else:
+            new_char = char
         new_word += new_char
     return new_word
 

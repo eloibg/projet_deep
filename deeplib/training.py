@@ -22,9 +22,8 @@ def validate(model, val_loader, use_gpu=False):
             targets = targets.cuda()
 
         inputs = Variable(inputs, volatile=True)
-        inputs = nn.utils.rnn.pack_padded_sequence(inputs, inputs_len, batch_first=True)
         targets = Variable(targets, volatile=True)
-        output = model(inputs)
+        output = model(inputs, inputs_len)
 
         predictions = output.max(dim=1)[1]
 
@@ -52,10 +51,9 @@ def train(model, dataset, n_epoch, batch_size, learning_rate, use_gpu=False):
                 inputs = inputs.cuda()
                 targets = targets.cuda()
             inputs = Variable(inputs)
-            inputs = nn.utils.rnn.pack_padded_sequence(inputs, inputs_len, batch_first=True)
             targets = Variable(targets)
             optimizer.zero_grad()
-            output = model(inputs)
+            output = model(inputs, inputs_len)
 
             loss = criterion(output, targets)
             loss.backward()

@@ -74,3 +74,25 @@ class LexiconClassify:
                 sentiment_per_word.append(dict_score_list)
             self.sentiment_scores.append(sentiment_per_word)
         self.close_dicts()
+
+
+    """
+    Adds sentiment information to word embeddings
+    Arg embed is a dictionnary were the keys are words in this format: word#pos
+    
+    """
+    def word_sentiment(self, word):
+        word_pos_values = []
+        word_neg_values = []
+        for dict in self.dict_list:
+            posDict = dict[0]
+            negDict = dict[1]
+            if word in posDict:
+                pos_value = posDict[word]
+                neg_value = negDict[word]
+            else:
+                pos_value = 0
+                neg_value = 0
+            word_pos_values.append(pos_value)
+            word_neg_values.append(neg_value)
+        return word_pos_values + word_neg_values

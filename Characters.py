@@ -25,4 +25,4 @@ class Characters:
                 one_hot_char[0] = 1
             one_hot_word = np.add(one_hot_word, one_hot_char)
         maximum = np.max(one_hot_word)
-        return np.divide(one_hot_word, maximum)
+        return np.divide(one_hot_word, max(1, maximum))
