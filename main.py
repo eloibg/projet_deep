@@ -51,28 +51,31 @@ class GRU(nn.Module):
         batch_size = x.shape[1]
         x = x.view(x.shape[0] * batch_size, x.shape[2])
         adjusted_lengths = [output_len*batch_size-batch_size for output_len in output_lens]
-        x = x.index_select(0, Variable(torch.LongTensor(adjusted_lengths)))
+        if USE_GPU:
+            x = x.index_select(0, Variable(torch.LongTensor(adjusted_lengths)).cuda())
+        else:
+            x = x.index_select(0, Variable(torch.LongTensor(adjusted_lengths)))
         x = self.dropout(x)
         output = self.lc1(x)
         output = self.relu(output)
-        output = self.lc2(x)
+        output = self.lc2(output)
         return output
 
 
-def main(argv):
-    pre = Preprocess(argv[0], argv[1], sentiment=SENTIMENT)
+def main_load():
+    train_path = "C:\\Users\\eloib\\Downloads\\train\\train.csv"
+    emb_path = "C:\\Users\\eloib\\Downloads\\crawl-300d-2M.vec\\crawl-300d-2M.vec"
+    pre = Preprocess(train_path, emb_path, sentiment=SENTIMENT)
     pre.build_vectors()
     dataset = ToxicityDataset(pre.vectors, pre.targets)
+    return dataset, pre
+
+
+def main_train(dataset, pre):
     if SENTIMENT:
         gru = GRU(372, pre.embedding_matrix).double()
     else:
         gru = GRU(360).double()
     if USE_GPU:
         gru.cuda()
-    training.train(gru, dataset, n_epoch=5, batch_size=4, learning_rate=0.1, use_gpu=USE_GPU)
-
-if __name__ == '__main__':
-    train_path = "C:\\Users\\eloib\\Downloads\\train\\short_train.csv"
-    emb_path = "C:\\Users\\eloib\\Downloads\\crawl-300d-2M.vec\\crawl-300d-2M.vec"
-    main((train_path, emb_path))
-
+    training.train(gru, dataset, n_epoch=15, batch_size=1, learning_rate=0.1, use_gpu=USE_GPU)

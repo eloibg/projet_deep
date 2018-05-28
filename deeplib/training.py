@@ -38,7 +38,7 @@ def train(model, dataset, n_epoch, batch_size, learning_rate, use_gpu=False):
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.3)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.3)
 
     train_loader, val_loader = train_valid_loaders(dataset, batch_size=batch_size)
     for i in range(n_epoch):

@@ -11,6 +11,7 @@ from AddNoise import add_noise
 UNKNOWN_TOKEN = '<UNK>'
 EMBEDDING_SIZE = 300
 CHAR_LIST = 'abcdefghijklmnopqrstuvwxyz1234567890.,\';:^()#<>[]{}!"/$%?&*'
+ADD_RANDOM_SUBVERSION = True
 
 
 class Preprocess:
@@ -23,7 +24,7 @@ class Preprocess:
         self.y_train = self.train["toxic"].values
 
         self.fasttext_embeds = pd.read_table(FASTTEXT_PATH, sep=" ", index_col=0, header=None, usecols=range(0, 301),
-                                             skiprows=1, quoting=csv.QUOTE_NONE)#, nrows=100)
+                                             skiprows=1, quoting=csv.QUOTE_NONE)
         self.dictionary = {}
         self.embedding_matrix = None
         self.processed_text = []
@@ -59,7 +60,7 @@ class Preprocess:
             sentence = check_for_idioms(sentence)
             tokens = nltk.wordpunct_tokenize(sentence)
             tokens = [x.lower() for x in tokens]
-            if toxic == 1:
+            if toxic == 1 and ADD_RANDOM_SUBVERSION:
                 tokens = add_noise(tokens)
             tokens = nltk.pos_tag(tokens)
             tokens = assignSWNTags(tokens)
